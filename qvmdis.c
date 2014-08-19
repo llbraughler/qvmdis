@@ -13,10 +13,11 @@
 #include <unistd.h>
 #include <errno.h>
 
-#define NUM_BYTECODES 60
-#define QAGAME         0
-#define CGAME          1
-#define UI             2
+#define NUM_BYTECODES        60
+#define NUM_HEADER_FIELDS     8
+#define QAGAME                0
+#define CGAME                 1
+#define UI                    2
 
 int qvmtype;
 
@@ -676,21 +677,25 @@ int main(int argc, char **argv)
 
 int read_q3vm_header(int fd)
 {
-	read(fd, &header.magic, 4);
-	read(fd, &header.instructionCount, 4);
- 	read(fd, &header.codeOffset, 4);
-	read(fd, &header.codeLength, 4);
-	read(fd, &header.dataOffset, 4);
-	read(fd, &header.dataLength, 4);
-	read(fd, &header.litLength, 4);
-	read(fd, &header.bssLength, 4);
-	read(fd, &header.jtrgLength, 4);
-
-	if(header.jtrgLength == 0 || header.bssLength == 0 ||
-	   header.dataLength == 0 || header.litLength == 0 ||
-	   header.codeLength == 0) return 0;
-
-	if(header.instructionCount == 0) return 0;
+	int i;
+	ssize_t headerSizes[NUM_HEADER_FIELDS] = { 0 };
+	
+	headerSizes[0] = read(fd, &header.magic, 4);
+	headerSizes[1] = read(fd, &header.instructionCount, 4);
+ 	headerSizes[2] = read(fd, &header.codeOffset, 4);
+	headerSizes[3] = read(fd, &header.codeLength, 4);
+	headerSizes[4] = read(fd, &header.dataOffset, 4);
+	headerSizes[5] = read(fd, &header.dataLength, 4);
+	headerSizes[6] = read(fd, &header.litLength, 4);
+	headerSizes[7] = read(fd, &header.bssLength, 4);
+	headerSizes[8] = read(fd, &header.jtrgLength, 4);
+	
+	for(i = 0; i <= NUM_HEADER_FIELDS; i++) {
+		// jtrgLength is allowed to be 0
+		if(headerSizes[i] < 0 || (headerSizes[i] == 0 && i < 8)) {
+			return 0;
+		}
+	}
 
 	return 1;
 }
@@ -698,11 +703,10 @@ int read_q3vm_header(int fd)
 int load_instructionPointers(int fd)
 {
 	int icount, offset;
+	ssize_t byteSize, paramSize;
 	u_char bytecode;
 
-	if((instructionPointers =
-				malloc(header.instructionCount *
-					sizeof(instructionPointer_t))) == NULL) {
+	if((instructionPointers = malloc(header.instructionCount * sizeof(instructionPointer_t))) == NULL) {
 		fprintf(stderr, "Unable to allocate memory: %s\n",
 				strerror(errno));
 		return 0;
@@ -713,9 +717,9 @@ int load_instructionPointers(int fd)
 	icount = offset = 0;
 
 	while(offset < header.codeLength && icount < header.instructionCount) {
-		read(fd, &bytecode, 1);
-
-		if(bytecode > NUM_BYTECODES) {
+		byteSize = read(fd, &bytecode, 1);
+		
+		if(byteSize <= 0 || bytecode > NUM_BYTECODES) {
 			fprintf(stderr, "Invalid bytecode '%d' at 0x%x\n",
 					bytecode, offset);
 
@@ -729,8 +733,12 @@ int load_instructionPointers(int fd)
 
 		if(bytecodes[bytecode].param_size > 0) {
 			instructionPointers[icount].param = 0;
-			read(fd, &instructionPointers[icount].param,
+			paramSize = read(fd, &instructionPointers[icount].param,
 					bytecodes[bytecode].param_size);
+
+			if(paramSize < 0) {
+				fprintf(stderr, "Error while accessing parameter at offset %d: %s\n", offset, strerror(paramSize));
+			}
 		}
 
 		offset += (1 + bytecodes[bytecode].param_size);
