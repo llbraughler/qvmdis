@@ -1,8 +1,6 @@
 /*
- * Q3VM Disassembler for Urban Terror by strata
- * What you do with this is not my responsibility.
- *
- * copyright (C) 2012 strata@dropswitch.net
+ * Q3VM Disassembler (generic) by strata (@stratumine), @llbraughler
+ * copyright (C) 2012 strata@dropswitch.net, llbraughler@gmail.com
  */
 
 #include <stdio.h>
@@ -158,10 +156,6 @@ char *qa_syscalls_0[49] =
 	"G_TRACECAPSULE",
 	"G_ENTITY_CONTACTCAPSULE",
 	"G_FS_SEEK",
-    // new since 4.2.001
-	"G_NET_STRINGTOADR",
-	"G_NET_SENDPACKET",
-	"G_SYS_STARTPROCESS",
 };
 
 char *qa_syscalls_200[12] =
@@ -513,16 +507,7 @@ char *ui_syscalls_0[93] =
 	"UI_LAN_SERVERSTATUS",
 	"UI_LAN_GETSERVERPING",
 	"UI_LAN_SERVERISVISIBLE",
-	"UI_LAN_COMPARESERVERS",
-    // new since 4.2.001
-	"UI_NET_STRINGTOADR",
-	"UI_Q_VSNPRINTF",
-	"UI_NET_SENDPACKET",
-	"UI_COPYSTRING",
-	"UI_SYS_STARTPROCESS",
-    // 
-	"UI_FS_SEEK",
-	"UI_SET_PBCLSTATUS"
+	"UI_LAN_COMPARESERVERS""
 };
 
 char *ui_syscalls_100[9] =
@@ -548,7 +533,7 @@ int n_functions;
 
 void exit_usage(char *argv0)
 {
-	printf("Q3VM Disassembler for Urban Terror by strata\n\n"
+	printf("Q3VM Disassembler\n 
 	       "\tq - qagame\n"
 		   "\tc - cgame\n"
 		   "\tu - ui\n\n"
